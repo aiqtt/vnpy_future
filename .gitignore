@@ -1,0 +1,7 @@
+/.idea
+
+/examples/VnTrader/temp
+/vnpy/api/qdp/docs
+/vnpy/api/shzd/docs
+*.pyc
+*.json
