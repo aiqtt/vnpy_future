@@ -15,7 +15,6 @@ from vnpy.trader.uiBackMainWindow import *
 import talib
 from vnpy.trader.vtFunction import *
 import qdarkstyle #Qt黑色主题
-from   vnpy.trader.indicator.SAR import *
 
 import sys
 reload(sys)
@@ -107,7 +106,7 @@ class BackManager(object):
         # 插入bar数据
         self.klineOpt.KLtitle.setText(symbol + " opt", size='10pt')
         self.klineOpt.loadDataBar(self.hourBarData[symbol])
-        self.klineOpt.addIndicatorSar(self.hourSarData[symbol])
+        #self.klineOpt.addIndicatorSar(self.hourSarData[symbol])
         self.klineOpt.updateSig(self.hourListSig[symbol])
 
         #self.klineDay.KLtitle.setText(symbol + " 5min", size='10pt')
@@ -144,10 +143,10 @@ class BackManager(object):
             sarHourList = self.hourBarData[symbol]
             hourHighArray = np.array(sarHourList.high.values)
             hourLowArray = np.array(sarHourList.low.values)
-            sarArr1 = SAR()
-            sarArr1.OnCalculate(len(hourHighArray),0, hourHighArray, hourLowArray)
+            # sarArr1 = SAR()
+            #sarArr1.OnCalculate(len(hourHighArray),0, hourHighArray, hourLowArray)
             #hourSar = talib.SAR(hourHighArray, hourLowArray)
-            self.hourSarData[symbol] = sarArr1.ExtSARBuffer
+            #self.hourSarData[symbol] = sarArr1.ExtSARBuffer
 
      ##加上开平仓信号########################################
     def loadSig(self, symbol):
@@ -291,7 +290,7 @@ if __name__ == '__main__': #加载本地trade.csv合约数据
     # contactSymbol = "rb1605"  ###合约
     # curKType = "5min"  ## 当前加载的k线类型   1min  3min  5min  15min  30min  60min  day
     # fullFilePath = filePath+curKType+"/"+contactSymbol+".txt"
-    optKType = "6min"   ## 操作周期k线类型   1min  3min  5min  15min  30min  60min  day
+    optKType = "60min"   ## 操作周期k线类型   1min  3min  5min  15min  30min  60min  day
 
     app = QtWidgets.QApplication(sys.argv)
     styleSheet = qdarkstyle.load_stylesheet(pyside=False)
@@ -306,113 +305,3 @@ if __name__ == '__main__': #加载本地trade.csv合约数据
     main.show()
     app.exec_()
 
-
-
-    # filePath = "D:/data/"
-    # contactSymbol = "ru0000"  ###合约
-    # curKType = "5min"  ## 当前加载的k线类型   1min  3min  5min  15min  30min  60min  day
-    # fullFilePath = filePath+curKType+"/"+contactSymbol+".txt"
-    # optKType = "1min"   ## 操作周期k线类型   1min  3min  5min  15min  30min  60min  day
-    #
-    #
-    #
-    #
-    # app = QApplication(sys.argv)
-    # # 界面设置
-    # cfgfile = QtCore.QFile('css.qss')
-    # cfgfile.open(QtCore.QFile.ReadOnly)
-    # styleSheet = cfgfile.readAll()
-    # styleSheet = unicode(styleSheet, encoding='utf8')
-    # app.setStyleSheet(styleSheet)
-    #
-    #
-    #
-    # ui = KLineWidget()
-    # ui.show()
-    # ui.KLtitle.setText(contactSymbol+curKType,size='20pt')
-    #
-    # txtData = pd.DataFrame.from_csv(fullFilePath ,header=None,index_col=7)
-    #
-    # txtData = txtData.rename(columns = {0:'symbol', 1:"vtSymbol",2:"exchange",3:"open",4:"high",5:"low",6:"close",7:"date",8:"time",9:"datetime",10:"volume",11:"openInterest"})
-    #
-    # ui.loadDataBar(txtData)
-    #
-    # count = txtData.shape[0]
-    #
-    # ##加入sar指标
-    # highArray = np.array(txtData.high.values)
-    # lowArray = np.array(txtData.low.values)
-    #
-    #
-    # sar = talib.SAR(highArray, lowArray)
-    #
-    #
-    # ui.addIndicatorSar(sar)
-    #
-    #
-    # import  csv
-    #
-    # ##加上开平仓信号
-    #
-    #
-    # fieldnames = ['dt','symbol', 'exchange', 'vtSymbol', 'tradeID', 'vtTradeID', 'orderID', 'vtOrderID',
-    #                   'direction','offset','price','volume','tradeTime',"gatewayName","rawData"]
-    # tradePath = getTempPath("trade.csv")
-    # if os.path.exists(tradePath):
-    #     csvTradeData = pd.DataFrame.from_csv(tradePath,encoding="utf_8_sig",index_col=7)
-    #
-    # tradeCount = csvTradeData.shape[0]
-    #
-    # listSig = [ None for i in range(count)]
-    # curentIndex = 0
-    # for dataIndex in range(count):
-    #     listSig[dataIndex] = None
-    #     data_time_tmp = txtData.ix[[dataIndex]].values[0][8]  ##时间
-    #     index_time = datetime.strptime(data_time_tmp,"%Y-%m-%d %H:%M:%S")
-    #
-    #     if data_time_tmp == "2015-01-19 14:00:00":
-    #         aabb  =3
-    #
-    #     while curentIndex < tradeCount:
-    #
-    #         tra_time_str = csvTradeData.ix[[curentIndex]].values[0][0]    ##时间
-    #         #print(csvData.ix[[curentIndex]].values[0][7])
-    #         #print(csvData.ix[[curentIndex]].values[0][8])
-    #         #print(csvData.ix[[curentIndex]].values[0][3])
-    #         if(csvTradeData.ix[[curentIndex]].values[0][3] != contactSymbol):
-    #             curentIndex += 1
-    #             continue
-    #         if type(tra_time_str) == float:  ##Nan
-    #             curentIndex += 1
-    #             continue
-    #
-    #         tra_time = datetime.strptime(tra_time_str,"%Y-%m-%d %H:%M:%S")  ##2014-01-09 09:06:00
-    #
-    #         #if optKType == "1min":
-    #         hour_t = tra_time.hour
-    #         if tra_time.minute != 0 and hour_t != 23:
-    #             hour_t += 1
-    #
-    #         tra_time = tra_time.replace(hour=(hour_t),minute=0).strftime("%Y-%m-%d %H:%M:%S")
-    #
-    #         if data_time_tmp > tra_time:
-    #             aaa = 2
-    #
-    #         if data_time_tmp < tra_time:
-    #             break
-    #
-    #         if data_time_tmp == tra_time:
-    #             sigDataa = {"direction": csvTradeData.ix[[curentIndex]].values[0][7],"offset":csvTradeData.ix[[curentIndex]].values[0][8],"price":csvTradeData.ix[[curentIndex]].values[0][9]}
-    #             listSig[dataIndex] = sigDataa
-    #             #if csvData.ix[[curentIndex]].values[0][7] == u'空':
-    #                 #listSig[dataIndex] = -1
-    #             #else:
-    #                # listSig[dataIndex] = 1
-    #
-    #         curentIndex += 1
-    #
-    #
-    # ui.updateSig(listSig)
-    #
-    #
-    # app.exec_()
