@@ -1,0 +1,11 @@
+{
+    "history_file_path": "d:/ProgramData/aiqtt_data/history_tick/",
+    "tick_file_path": "d:/ProgramData/aiqtt_data/tick/",
+    "data_path": "d:/ProgramData/aiqtt_data/",
+    "server_mongodb_ip": "120.132.29.94",
+    "server_mongodb_port": 27017,
+    "server_mongodb_user": "kk",
+    "server_mongodb_password": "K123456",
+    "local_mongodb_ip": "localhost",
+    "local_mongodb_port": 27017
+}

@@ -1,0 +1,11 @@
+{
+    "filePath":"G:/tick_bar/rb/",
+    "strategyCycle":"60min",
+    "contactInfo":{"rb0000":{"pre":"rb","length":6,"maxVolume":2000,"margin":0.1,"volumeMultiple":10,"priceTick":1,"strategyCycle":"15min"}
+
+    },
+    "capitalUseRat":0.5,
+    "riskRate":0.02,
+    "capital":1000000
+
+}

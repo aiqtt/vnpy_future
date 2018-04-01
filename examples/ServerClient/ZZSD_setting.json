@@ -1,0 +1,8 @@
+{
+    "name":"zzsd",
+    "vtSymbol":"rb0000",
+    "maxVolume":50,
+    "riskRate":0.02,
+    "strategyCycle":"5min",
+    "capitalUseRat":0.5
+}

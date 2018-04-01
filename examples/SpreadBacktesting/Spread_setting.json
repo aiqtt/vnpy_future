@@ -1,0 +1,32 @@
+{
+    "filePath":"D:/data/",
+    "strategyCycle":"5min",
+    "contactInfo":{"rb0000":{"pre":"rb","length":6,"maxVolume":2000,"margin":0.1,"volumeMultiple":10,"priceTick":1,"strategyCycle":"5min","commission":2},
+                     "hc0000":{"pre":"hc","length":6,"maxVolume":2000,"margin":0.1,"volumeMultiple":10,"priceTick":1,"strategyCycle":"5min","commission":2}
+                      },
+    "spread": {
+                        "name": "rb-hc",
+                        "activeLeg":
+                            {
+                                "vtSymbol": "rb",
+                                "ratio": 1,
+                                "multiplier": 1.0,
+                                "payup": 2
+                            },
+                        "passiveLegs": [
+                            {
+                                "vtSymbol": "hc",
+                                "ratio": -1,
+                                "multiplier": -1.0,
+                                "payup": 2
+                            }
+                        ]
+                    },
+    "capitalUseRat":0.5,
+    "riskRate":0.02,
+    "priceTick":1,
+    "volumeMultiple":10,
+    "commission":2,
+    "capital":1000000
+
+}

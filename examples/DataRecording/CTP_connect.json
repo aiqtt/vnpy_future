@@ -1,0 +1,7 @@
+{
+    "brokerID": "1080",
+    "mdAddress": "tcp://180.169.112.52:41213",
+    "tdAddress": "tcp://180.169.112.52:41205",
+    "userID": "12",
+    "password": "12"
+}

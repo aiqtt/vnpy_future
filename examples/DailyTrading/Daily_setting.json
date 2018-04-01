@@ -1,0 +1,8 @@
+{
+    "name":"daily",
+    "contactInfo":{"rb0000":{"pre":"rb","length":6,"maxVolume":1000, "strategyCycle":"5min","className":"DailySarStrategy"},
+                      "ru0000":{"pre":"ru","length":6,"maxVolume":1000, "strategyCycle":"5min","className":"DailySarCtaStrategy"}
+                      },
+    "capitalUseRat":0.5,
+    "riskRate":0.02
+}

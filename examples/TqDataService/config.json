@@ -1,0 +1,6 @@
+{
+	"MONGO_HOST": "localhost",
+	"MONGO_PORT": 27017,
+
+	"SYMBOLS": ["rb1712","rb1801","rb1802","rb1803","rb1804","rb1805","rb1806","rb1807","rb1808","rb1809","rb1810"]
+}

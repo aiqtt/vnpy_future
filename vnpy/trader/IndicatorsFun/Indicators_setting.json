@@ -1,0 +1,7 @@
+{
+  "SAR":{"className":"sarAlgo","location":"mainfigure"},
+  "BOLL":{"className":"bollAlgo", "location":"mainfigure","param":{"N":20,"M":20,"P":2}},
+  "CCI":{"className":"cciAlgo", "location":"vicefigure2","param":{"N":21}},
+  "MA":{"className":"maAlgo", "location":"mainfigure","param":{"N1":3,"N2":5,"N3":8,"N4":13,"N5":21,"N6":34,"algo":"EMA"}},
+  "OPI":{"className":"opiAlgo", "location":"vicefigure2"}
+}

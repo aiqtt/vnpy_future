@@ -1,0 +1,22 @@
+[
+    {
+        "name": "rb-hc",
+
+        "activeLeg": 
+            {
+                "vtSymbol": "rb",
+                "ratio": 1,
+                "multiplier": 1.0,
+                "payup": 2
+            },
+
+        "passiveLegs": [
+            {
+                "vtSymbol": "hc",
+                "ratio": -1,
+                "multiplier": -1.0,
+                "payup": 2
+            }
+        ]
+    }
+]
