@@ -10,7 +10,7 @@ from collections import OrderedDict
 from itertools import product
 import multiprocessing
 import copy
-
+import random
 
 import pandas as pd
 import numpy as np
@@ -100,7 +100,7 @@ class BacktestingEngine(object):
 
 
         self.symbolFile = {}     #日线文件句柄  每天开始更新一下bar，小时线直接合成
-        self.symbolData = []
+        self.symbolData = {}
 
         self.portfolioCurTimeList = {}
 
@@ -155,7 +155,7 @@ class BacktestingEngine(object):
     #----------------------------------------------------------------------
     def output(self, content):
         """输出内容"""
-        print str(datetime.now()) + "\t" + content
+        print str(self.dt) + "\t" + content
 
     #------------------------------------------------
     # 参数设置相关
@@ -305,6 +305,35 @@ class BacktestingEngine(object):
         filePath = self.FilePath+'portfolio/'+name+".txt"
 
         return self.loadFileData(filePath, self.dataStartDate)
+
+    def loadOptData(self,symbol, strategyCycle,days=None):
+        fileName = "5min"
+        if strategyCycle == "5min":
+            fileName = "5min"
+        elif strategyCycle == "6min":
+            fileName = "6min"
+        elif strategyCycle == "7min":
+            fileName = "7min"
+        elif strategyCycle == "8min":
+            fileName = "8min"
+        elif strategyCycle == "9min":
+            fileName = "9min"
+        elif strategyCycle == "3min":
+            fileName = "3min"
+        elif strategyCycle == "10min":
+            fileName = "10min"
+        elif strategyCycle == "15min":
+            fileName = "15min"
+        elif strategyCycle == "30min":
+            fileName = "30min"
+        elif strategyCycle == "60min":
+            fileName = "60min"
+        elif strategyCycle == "day":
+            fileName = "day"
+        else:
+            return None
+
+        return self.loadFileData(self.FilePath+fileName+"/"+symbol+".txt",self.curDate)
 
 
     ##读取日线文件到那天的数据
@@ -461,13 +490,19 @@ class BacktestingEngine(object):
                 ##### 1天1个循环
 
                 ##取最大时间的合约tick
-                self.symbolData.sort()
-                tickData = self.symbolData[0]
-                self.symbolData.remove(tickData)
+                #self.symbolData.sort()
+                #tickData = self.symbolData[0]
+                #elf.symbolData.remove(tickData)
 
 
-                for key,value in tickData.items():
-                    tickData = value
+                #for key,value in tickData.items():
+                #    tickData = value
+
+                keys = self.symbolData.keys()
+                keys.sort()
+
+                tickData = self.symbolData[keys[0]]
+                del self.symbolData[keys[0]]
 
                 self.readFileLine(tickData.vtSymbol)
 
@@ -542,6 +577,32 @@ class BacktestingEngine(object):
         return spread
 
 
+    def loadOptBar_tick(self, fileHandle, dateTimePreStr,dateTimeLastStr, seekStart, seedEnd):
+        ##用seek，到curDate前面差不多位置
+        #fsize = os.path.getsize(optFilePath)
+
+        seekMiddle = (seekStart + seedEnd)/2
+
+        fileHandle.seek(seekMiddle)
+        fileHandle.readline()
+        line = fileHandle.readline()
+
+        #print line
+        data_tick = self.loadTickData(line)
+
+        if data_tick.date >= dateTimePreStr and data_tick.date <=  dateTimeLastStr:
+            return
+
+        if data_tick.date > dateTimeLastStr:
+            self.loadOptBar_tick(fileHandle, dateTimePreStr,dateTimeLastStr, seekStart, seekMiddle)
+        elif data_tick.date < dateTimePreStr:
+            self.loadOptBar_tick(fileHandle, dateTimePreStr, dateTimeLastStr,seekMiddle, seedEnd)
+
+
+        if seekStart == seedEnd:
+            return
+
+
     ##加载操作周期bar
     def seekFileToDate(self, symbol,optFilePath,  curDate):
 
@@ -551,6 +612,17 @@ class BacktestingEngine(object):
         if not self.symbolFile.has_key(symbol):
             self.symbolFile[symbol] = open(self.FilePath+optFilePath+symbol+".txt", 'r')
             ##第一次seek到当天的位置
+
+            if self.mode == self.TICK_MODE:
+                ##先seek到那一天前
+                fsize = os.path.getsize(self.FilePath+optFilePath+symbol+".txt")
+
+                dateTimePreStr = (curDate-timedelta(7)).strftime("%Y%m%d")
+                dateTimeLastStr = (curDate - timedelta(1)).strftime("%Y%m%d")
+                #print dateTimePreStr
+
+                self.loadOptBar_tick(self.symbolFile[symbol],dateTimePreStr,dateTimeLastStr,0,fsize)
+
 
             while True:
                 line = self.symbolFile[symbol].readline()
@@ -566,7 +638,8 @@ class BacktestingEngine(object):
                 if symbolData_t.date == dateTimeStr or symbolData_t.date > dateTimeStr:
 
                     ##读到了
-                    self.symbolData.append({str(symbolData_t.datetime)+symbol: symbolData_t})
+                    #self.symbolData.append({str(symbolData_t.datetime)+symbol: symbolData_t})
+                    self.symbolData[symbolData_t.date + symbolData_t.time + symbol] = symbolData_t
 
                     break;
 
@@ -584,7 +657,8 @@ class BacktestingEngine(object):
         else:
            symbolData_t = self.loadTickData(line)
 
-        self.symbolData.append({str(symbolData_t.datetime)+symbol: symbolData_t})
+        #self.symbolData.append({str(symbolData_t.datetime)+symbol: symbolData_t})
+        self.symbolData[symbolData_t.date + symbolData_t.time +symbol] = symbolData_t
 
         return isEnd
 
@@ -635,16 +709,21 @@ class BacktestingEngine(object):
         self.tick = tick
         self.currentSymbol = tick.symbol
         self.dt = tick.datetime
+        #print  str(self.dt) + str(tick.symbol)
         self.positionManager.updateTickPrice(tick)
 
-
+        self.crossStopOrder()
+        self.crossLimitOrder()
 
 
         for portfolio in  self.portfolioList.values():
 
             if self.portfolioCurTimeList.has_key(portfolio.symbol):
 
-                if portfolio.datetime  and portfolio.datetime < tick.datetime\
+                portfolio.newTick(tick)
+
+                #and portfolio.datetime < tick.datetime
+                if portfolio.datetime  \
                         and portfolio.tickInited == True:
 
                     ##组合新的时间，计算组合，并推送
@@ -653,16 +732,17 @@ class BacktestingEngine(object):
                     portfolioTick = VtTickData()
                     portfolioTick.datetime = tick.datetime
                     portfolioTick.lastPrice = lastPrice
+                    portfolioTick.askPrice1 = portfolio.calculateClosePrice()
+                    portfolioTick.bidPrice1 = portfolioTick.askPrice1
 
                     self.algoList[portfolio.symbol].updatePortfolioTick(portfolioTick)
 
 
-            portfolio.newTick(tick)
+
             if self.currentSymbol in portfolio.allLegs.keys():
                 self.portfolioCurTimeList[portfolio.symbol] =  portfolio.datetime
 
-        self.crossStopOrder()
-        self.crossLimitOrder()
+
         #self.updateDailyClose(tick.datetime, tick.lastPrice)
 
     #----------------------------------------------------------------------
@@ -679,6 +759,8 @@ class BacktestingEngine(object):
 
         self.positionManager = PositionManager(setting["contactInfo"])
         self.accountManager = AccountManager(self.positionManager, setting["capital"])
+
+        self.positionManager.setRate(self.rate)
 
         self.contactInfo = setting["contactInfo"]
         self.portfolioInfo = setting["spread"]
@@ -700,6 +782,9 @@ class BacktestingEngine(object):
             buyBestCrossPrice = self.tick.askPrice1
             sellBestCrossPrice = self.tick.bidPrice1
 
+
+        jumpPrice = self.getContactValues(self.currentSymbol)["priceTick"]*self.slippage
+
         # 遍历限价单字典中的所有限价单
         for orderID, order in self.workingLimitOrderDict.items():
             # 推送委托进入队列（未成交）的状态更新
@@ -708,6 +793,7 @@ class BacktestingEngine(object):
 
             if not self.workingPortfolioOrderList.has_key(portfolioID):
                 self.output("cross   orderId:"+str(orderID))
+
 
             strategy = self.algoList[self.workingPortfolioOrderList[portfolioID].symbol]
 
@@ -756,9 +842,13 @@ class BacktestingEngine(object):
                 if buyCross:
                     trade.price = min(order.price, buyBestCrossPrice)  #bar  order.price
                     #self.strategy[self.currentSymbol].pos += order.totalVolume
+
+                    trade.price += jumpPrice
                 else:
                     trade.price = max(order.price, sellBestCrossPrice) #bar  order.price
                     #self.strategy[self.currentSymbol].pos -= order.totalVolume
+
+                    trade.price -= jumpPrice
 
                 option.tradeVolume = order.totalVolume
                 option.tradePrice = trade.price
@@ -828,8 +918,8 @@ class BacktestingEngine(object):
             bestCrossPrice = self.tick.lastPrice
 
 
-        jumpPrice = 5*1 #self.volumeMultiple * self.priceTick  ##目前下单是直接下，只有平仓下的是停止单，平仓加滑点
-
+        #jumpPrice = 5*1 #self.volumeMultiple * self.priceTick  ##目前下单是直接下，只有平仓下的是停止单，平仓加滑点
+        jumpPrice = self.getContactValues(self.currentSymbol)["priceTick"]*self.slippage
 
 
         # 遍历停止单字典中的所有停止单
@@ -928,12 +1018,12 @@ class BacktestingEngine(object):
     ##组合开仓
     def protforlioOpen(self,strategy, direction):
 
-
         protforlio = copy.deepcopy(strategy.protforlio)
-        protforlio.portfolioOrderId = str(datetime.now())+strategy.protforlio.symbol
+        protforlio.portfolioOrderId = str(datetime.now())+str(random.randint(1,100))+strategy.protforlio.symbol
         protforlio.direction = direction
         protforlio.status = POSITION_OPENING
 
+        self.writeCtaLog(" protforlioOpen " + direction)
 
         strategy.protforlioPosList[protforlio.portfolioOrderId] = protforlio
 
@@ -956,7 +1046,48 @@ class BacktestingEngine(object):
 
             self.workingOrderToPortfolio[orderId[0]] = protforlio.portfolioOrderId
 
+            self.writeOptionLog("getavalal:"+ str(self.accountManager.getCapital()) + " avalil:"+str(self.accountManager.getAvailable()))
             self.output("open  orderId:"+str(orderId)+"  portfolioOrderId:"+protforlio.portfolioOrderId)
+
+
+    def protforlioCloseOne(self,strategy, protforlio):
+
+            if protforlio.status != POSITION_OPEN:
+                return
+
+            closePrice = strategy.protforlio.calculateClosePrice()
+
+            #if protforlio.direction == DIRECTION_LONG:
+            #    prof = closePrice - protforlio.portfolioOpenPrice
+            #else:
+            #    prof = protforlio.portfolioOpenPrice - closePrice
+
+            #if prof  > strategy.commission or \
+            #        prof < -30:  ##达到-30平仓
+                ##不亏就平仓
+                ##所有合约下单
+
+            self.output(u"平仓：openPrice："+str(protforlio.portfolioOpenPrice)+" close:"+str(closePrice))
+
+            protforlio.status = POSITION_CLOSING
+            for leg in protforlio.allLegs.values():
+                ##市价下单
+                #if leg.lowerLimit == 0.0:
+                leg.lowerLimit = 0.000001
+                #if leg.upperLimit == 0.0:
+                leg.upperLimit = 9999.0
+
+                if (leg.multiplier < 0 and protforlio.direction == DIRECTION_LONG) or \
+                       (leg.multiplier > 0 and protforlio.direction == DIRECTION_SHORT)  :
+                    orderId = self.sendOrder(leg.vtSymbol,CTAORDER_COVER, leg.upperLimit, 1  ,strategy)
+                else:
+                    orderId = self.sendOrder(leg.vtSymbol,CTAORDER_SELL, leg.lowerLimit, 1  ,strategy)
+
+                self.workingOrderToPortfolio[orderId[0]] = protforlio.portfolioOrderId
+
+                self.output("close  orderId:"+str(orderId)+"  portfolioOrderId:"+protforlio.portfolioOrderId)
+
+
 
     #组合平仓
     def protforlioClose(self,strategy):
@@ -1244,6 +1375,46 @@ class BacktestingEngine(object):
 
         return lower, upper
 
+
+
+    #------------------------------------------------
+    # 交易写入文件
+    #------------------------------------------------
+    def protforlioToFile(self):
+        tradePath = getTempPath("protforlio.csv")
+        if os.path.exists(tradePath):
+            os.remove(tradePath)
+
+        import csv
+        import codecs
+
+
+        fieldnames = ['name','status', 'direction', 'portfolioOrderId', 'portfolioClosePrice', 'symbol', 'datetime', 'portfolioOpenPrice']
+
+
+
+        trade_file = open(tradePath, 'wb+')
+        trade_file.write(codecs.BOM_UTF8)
+        dict_writer = csv.DictWriter(trade_file, fieldnames=fieldnames)
+        dict_writer.writeheader()
+        for trade in self.portfolioOrderList.values():
+
+            dict = {}
+            dict["status"] = trade.status
+            dict["direction"] = trade.direction
+            dict["name"] = trade.name
+            dict["portfolioOrderId"] = trade.portfolioOrderId
+            dict["portfolioClosePrice"] = trade.portfolioClosePrice
+            dict["symbol"] = trade.symbol
+            dict["datetime"] = trade.datetime
+            dict["portfolioOpenPrice"] = trade.portfolioOpenPrice
+
+
+            dict_writer.writerow(dict)  # rows就是表单提交的数据
+        trade_file.close()
+
+
+
     #------------------------------------------------
     # 交易写入文件
     #------------------------------------------------
@@ -1286,6 +1457,150 @@ class BacktestingEngine(object):
         return lastTrade
 
 
+    def calculateBortfolioResult(self):
+        """
+        计算回测结果
+        """
+        self.output(u'计算回测结果')
+
+        # 首先基于回测后的成交记录，计算每笔交易的盈亏
+        resultList = []             # 交易结果列表
+
+        longTradeList = {}        # 合约对应的longtrade
+        shortTradeList = {}
+
+        longTrade = []              # 未平仓的多头交易
+        shortTrade = []             # 未平仓的空头交易
+
+        tradeTimeList = []          # 每笔成交时间戳
+        posList = [0]               # 每笔成交后的持仓情况
+
+
+        for portfolio in self.portfolioOrderList.values():
+            for k,v in portfolio.__dict__.items():
+                if  isinstance(v, basestring) or isinstance(v, int) or isinstance(v, float) or isinstance(v, datetime):
+                    print k,v,
+            print ''
+
+        for trade in self.tradeDict.values():
+            for k,v in trade.__dict__.items():
+                print k,v,
+            print ''
+
+        self.protforlioToFile()
+        self.tradeToFile()
+
+
+        # 然后基于每笔交易的结果，我们可以计算具体的盈亏曲线和最大回撤等
+        capital = self.capital           # 资金
+        maxCapital = 0          # 资金最高净值
+        drawdown = 0            # 回撤
+        maxDrawDownRat = 0.0      #最大回测率
+
+        totalResult = 0         # 总成交数量
+        totalTurnover = 0       # 总成交金额（合约面值）
+        totalCommission = 0     # 总手续费
+        totalSlippage = 0       # 总滑点
+
+        timeList = []           # 时间序列
+        pnlList = []            # 每笔盈亏序列
+        capitalList = []        # 盈亏汇总的时间序列
+        drawdownList = []       # 回撤的时间序列
+        drawdownRateList = []   # 回撤率的时间序列
+
+        winningResult = 0       # 盈利次数
+        losingResult = 0        # 亏损次数
+        totalWinning = 0        # 总盈利金额
+        totalLosing = 0         # 总亏损金额
+
+
+        keys = self.portfolioOrderList.keys()
+        keys.sort()
+
+        for key in keys:
+            portfolio = self.portfolioOrderList[key]
+
+            if portfolio.direction == DIRECTION_LONG:
+                pnl = portfolio.portfolioClosePrice - portfolio.portfolioOpenPrice
+
+            elif portfolio.direction == DIRECTION_SHORT:
+                pnl = portfolio.portfolioOpenPrice - portfolio.portfolioClosePrice
+
+            pnl = pnl * 10
+
+            commission = 14  ##3500*10*2*0.0001
+
+            pnl -= commission
+
+            capital += pnl
+            maxCapital = max(capital, maxCapital)
+            drawdown = capital - maxCapital
+
+            if drawdown != 0 and maxCapital > 0: #有策略 计算回测率
+                drawdownRate = abs(drawdown) / maxCapital
+                maxDrawDownRat = max(maxDrawDownRat,drawdownRate)
+                drawdownRateList.append(drawdownRate)
+            else:
+                drawdownRateList.append(0.0)
+
+
+            pnlList.append(pnl)
+            timeList.append(portfolio.datetime)      # 交易的时间戳使用平仓时间
+            capitalList.append(capital)
+            drawdownList.append(drawdown)
+
+            totalResult += 1
+            totalTurnover += 0
+            totalCommission += commission
+            totalSlippage += 0
+
+            if pnl >= 0:
+                winningResult += 1
+                totalWinning += pnl
+            else:
+                losingResult += 1
+                totalLosing += pnl
+
+        # 计算盈亏相关数据
+        winningRate = winningResult/totalResult*100         # 胜率
+
+        averageWinning = 0                                  # 这里把数据都初始化为0
+        averageLosing = 0
+        profitLossRatio = 0
+
+        if winningResult:
+            averageWinning = totalWinning/winningResult     # 平均每笔盈利
+        if losingResult:
+            averageLosing = totalLosing/losingResult        # 平均每笔亏损
+        if averageLosing:
+            profitLossRatio = -averageWinning/averageLosing # 盈亏比
+
+        # 返回回测结果
+        d = {}
+        d['capital'] = capital
+        d['maxCapital'] = maxCapital
+        d['drawdown'] = drawdown
+        d['maxDrawDownRat'] = maxDrawDownRat
+        d['totalResult'] = totalResult
+        d['totalTurnover'] = totalTurnover
+        d['totalCommission'] = totalCommission
+        d['totalSlippage'] = totalSlippage
+        d['timeList'] = timeList
+        d['pnlList'] = pnlList
+        d['capitalList'] = capitalList
+        d['drawdownList'] = drawdownList
+        d['drawdownRateList'] = drawdownRateList
+        d['winningRate'] = winningRate
+        d['averageWinning'] = averageWinning
+        d['averageLosing'] = averageLosing
+        d['profitLossRatio'] = profitLossRatio
+        d['posList'] = posList
+        d['tradeTimeList'] = tradeTimeList
+
+        return d
+
+
+
 
     #----------------------------------------------------------------------
     def calculateBacktestingResult(self):
@@ -1318,6 +1633,7 @@ class BacktestingEngine(object):
                 print k,v,
             print ''
 
+        self.protforlioToFile()
         self.tradeToFile()
 
         for trade in self.tradeDict.values():
@@ -1996,7 +2312,9 @@ class BacktestingEngine(object):
         """显示回测结果"""
         #d = self.calculateResult_result(result_list)
 
-        d = self.calculateBacktestingResult()
+        #d = self.calculateBacktestingResult()
+
+        d = self.calculateBortfolioResult()
 
         # 输出
         self.output('-' * 30)
@@ -2018,6 +2336,9 @@ class BacktestingEngine(object):
         self.output(u'亏损交易平均值\t%s' %formatNumber(d['averageLosing']))
         self.output(u'盈亏比：\t%s' %formatNumber(d['profitLossRatio']))
 
+        return d
+
+        """
         # 绘图
         fig = plt.figure(figsize=(10, 16))
 
@@ -2052,7 +2373,7 @@ class BacktestingEngine(object):
         plt.xticks(xindex, tradeTimeIndex, rotation=30)  # 旋转15
 
         plt.show()
-
+    """
 
     #----------------------------------------------------------------------
     def clearBacktestingResult(self):
@@ -2095,7 +2416,7 @@ class TradingResult(object):
 
         self.turnover = (self.entryPrice+self.exitPrice)*size*abs(volume)   # 成交金额
         self.commission = abs(volume)*commission                                # 手续费成本
-        self.slippage = slippage*2*size*abs(volume)                         # 滑点成本
+        self.slippage = 0##slippage*2*size*abs(volume)                         # 滑点成本
         self.pnl = ((self.exitPrice - self.entryPrice) * volume * size
                     - self.commission - self.slippage)                      # 净盈亏
 
@@ -2119,7 +2440,10 @@ class PositionManager(object):
         self.symbolSetting = symbolSetting ##合约参数信息 手数  保证金率  {"rb1205":{"maxVolume":50,"margin":0.1,volumeMultiple:10}}
 
 
+        self.rate = 0
 
+    def setRate(self,rate):
+        self.rate = rate
 
     def updateBarPrice(self,bar):
         self.symbolPrice[bar.symbol] = bar.open
@@ -2166,7 +2490,13 @@ class PositionManager(object):
 
                     Profit += pnl
 
-                    Profit -= self.getContactValues(positionData.vtSymbol)["commission"]*minPosition  ##手续费
+                    #Profit -= self.getContactValues(positionData.vtSymbol)["commission"]*minPosition  ##手续费
+
+                    ##手续费
+                    turnover = (positionData.price + position.price) * minPosition * self.getContactValues(position.vtSymbol)["volumeMultiple"]   # 成交金额
+                    commission = turnover*self.rate                            # 手续费成本
+
+                    Profit -= commission
 
                     # 计算未清算部分
                     positionData.position -= minPosition

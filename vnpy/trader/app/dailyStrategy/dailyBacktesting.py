@@ -611,8 +611,30 @@ class BacktestingEngine(object):
 
     """
 
+    def loadOptBar_tick(self, fileHandle, dateTimePreStr,dateTimeLastStr, seekStart, seedEnd):
+        ##用seek，到curDate前面差不多位置
+        #fsize = os.path.getsize(optFilePath)
+
+        seekMiddle = (seekStart + seedEnd)/2
+
+        fileHandle.seek(seekMiddle)
+        fileHandle.readline()
+        line = fileHandle.readline()
+
+        #print line
+        data_tick = self.loadTickData(line)
+
+        if data_tick.date >= dateTimePreStr and data_tick.date <=  dateTimeLastStr:
+            return
+
+        if data_tick.date > dateTimeLastStr:
+            self.loadOptBar_tick(fileHandle, dateTimePreStr,dateTimeLastStr, seekStart, seekMiddle)
+        elif data_tick.date < dateTimePreStr:
+            self.loadOptBar_tick(fileHandle, dateTimePreStr, dateTimeLastStr,seekMiddle, seedEnd)
 
 
+        if seekStart == seedEnd:
+            return
     ##加载操作周期bar
     def loadOptBar(self, symbol,optFilePath,  curDate):
 
@@ -627,6 +649,15 @@ class BacktestingEngine(object):
         if not self.optSymbolFile.has_key(symbol):
             self.optSymbolFile[symbol] = open(self.FilePath+optFilePath+symbol+".txt", 'r')
             ##第一次seek到当天的位置
+            if self.mode == self.TICK_MODE:
+                ##先seek到那一天前
+                fsize = os.path.getsize(self.FilePath+optFilePath+symbol+".txt")
+
+                dateTimePreStr = (curDate-timedelta(7)).strftime("%Y%m%d")
+                dateTimeLastStr = (curDate - timedelta(1)).strftime("%Y%m%d")
+                #print dateTimePreStr
+
+                self.loadOptBar_tick(self.optSymbolFile[symbol],dateTimePreStr,dateTimeLastStr,0,fsize)
 
             while True:
                 line = self.optSymbolFile[symbol].readline()
@@ -803,6 +834,11 @@ class BacktestingEngine(object):
         if tick.lastPrice == 0.0:
             return
 
+        if tick.askPrice1 == 0.0:
+            return
+
+        if tick.bidPrice1 == 0.0:
+            return
         if tick.lowerLimit == 0.0:
             tick.lowerLimit = 1.0
 
@@ -853,7 +889,9 @@ class BacktestingEngine(object):
             sellCrossPrice = self.tick.bidPrice1
             buyBestCrossPrice = self.tick.askPrice1
             sellBestCrossPrice = self.tick.bidPrice1
-        
+
+        jumpPrice = self.getContactValues(self.currentSymbol)["priceTick"]*self.slippage
+
         # 遍历限价单字典中的所有限价单
         for orderID, order in self.workingLimitOrderDict.items():
             # 推送委托进入队列（未成交）的状态更新
@@ -915,12 +953,16 @@ class BacktestingEngine(object):
                     else:
                         trade.price = min(order.price, buyBestCrossPrice)
                     self.strategy[self.currentSymbol].pos += order.totalVolume
+
+                    trade.price += jumpPrice
                 else:
                     if self.mode == self.BAR_MODE:
                         trade.price = order.price
                     else:
                         trade.price = max(order.price, sellBestCrossPrice)
                     self.strategy[self.currentSymbol].pos -= order.totalVolume
+
+                    trade.price -= jumpPrice
                 
                 trade.volume = order.totalVolume
                 trade.tradeTime = self.dt.strftime('%H:%M:%S')
@@ -958,7 +1000,7 @@ class BacktestingEngine(object):
 
 
         #jumpPrice = 1 #self.volumeMultiple * self.priceTick  ##目前下单是直接下，只有平仓下的是停止单，平仓加滑点
-        jumpPrice = self.getContactValues(self.currentSymbol)["priceTick"]*1
+        jumpPrice = self.getContactValues(self.currentSymbol)["priceTick"]*self.slippage
 
         
         # 遍历停止单字典中的所有停止单
@@ -1251,7 +1293,7 @@ class BacktestingEngine(object):
         return initData
 
 
-    def loadOptData(self,symbol, strategyCycle):
+    def loadOptData(self,symbol, strategyCycle,days=None):
         fileName = "5min"
         if strategyCycle == "5min":
             fileName = "5min"

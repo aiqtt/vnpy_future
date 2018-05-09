@@ -182,6 +182,28 @@ class StSpread(object):
 
         return hasUpdate
 
+    ##计算初始化数据，主要是为策略初始化计算
+    def calculateInitArray(self, dataList,  n):
+        initData = []
+
+        index = -1*n
+        while(index < 0):
+            # 遍历价差腿列表
+            price = 0.0
+            for  leg in self.allLegs.values():
+                # 计算价格
+                if leg.multiplier > 0:
+                    price += dataList[leg.vtSymbol][index].close * leg.multiplier
+
+                else:
+                    price += dataList[leg.vtSymbol][index].close * leg.multiplier
+
+
+            initData.append(price)
+
+            index += 1
+
+        return initData
 
     def calculateLastPrice(self):
 
