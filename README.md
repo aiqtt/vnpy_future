@@ -18,6 +18,7 @@
 
 界面：
 * 增加回测后基于K线图查看成交,目前已可以研究策略(examples\DailyBacktesting\showResult.py)
+* K线显示可以下载我们的数据，运行tool\bar\kLineFile.py
 * 复盘和监控界面
 
 ![avatar](https://github.com/aiqtt/vnpy_future/blob/master/examples/DailyBacktesting/huice.png)
