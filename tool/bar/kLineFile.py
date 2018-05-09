@@ -17,7 +17,6 @@ from datetime import datetime, timedelta
 from collections import deque
 import qdarkstyle #Qt黑色主题
 from vnpy.trader.uiKLine import *
-from vnpy.trader.indicator.SAR import *
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -67,13 +66,6 @@ if __name__ == '__main__':
     ui.loadDataBar(getTxtData(path))
 
 
-    hourHighArray = np.array(ui.listHigh)
-    hourLowArray = np.array(ui.listLow)
-    sarArr1 = SAR()
-    sarArr1.OnCalculate(len(hourHighArray), 0, hourHighArray, hourLowArray)
-
-
-    ui.addIndicatorSar(sarArr1.ExtSARBuffer)
 
 
     app.exec_()
