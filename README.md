@@ -16,8 +16,7 @@
 * 修改支持多策略多品种
 * 使用mysql记录实盘中仓位、成交记录等
 
-界面：
-界面介绍https://zhuanlan.zhihu.com/p/36122095
+界面：（介绍https://zhuanlan.zhihu.com/p/36122095）
 
 * 界面加载k线，
 * 鼠标滚轮缩放，键盘缩放跳转
