@@ -1,5 +1,14 @@
 # encoding: UTF-8
 
+
+import os
+import  sys
+
+# 将repostory的目录，作为根目录，添加到系统环境中。这样不用install
+ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..' , '..'))
+sys.path.append(ROOT_PATH)
+
+
 import multiprocessing
 from time import sleep
 from datetime import datetime, time
