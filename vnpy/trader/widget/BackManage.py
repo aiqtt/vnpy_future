@@ -166,7 +166,7 @@ class BackManager(QtWidgets.QMainWindow):
 
                 index_time_end = index_time + timedelta(hours=1)
 
-                if index_time_next < tra_time:
+                if index_time_next <= tra_time:
                     break
 
                 if index_time <= tra_time and index_time_next > tra_time:
